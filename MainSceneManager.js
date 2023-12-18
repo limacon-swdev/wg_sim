@@ -844,8 +844,8 @@ MainSceneManager.prototype = {
         this.horn.visibility = false;
         this.removeLines();
         const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
-        var objURL = BABYLON.Tools.FileAsURL(obj);
-        console.log(objURL)
+        //var objURL = BABYLON.Tools.FileAsURL(obj);
+        //console.log(objURL)
         download("speaker.obj", obj);
     },
     
