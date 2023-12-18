@@ -708,35 +708,26 @@ MainSceneManager.prototype = {
 		    polygon.isPickable = false;
 		    polygon.position.y -=this.roomDepth/2;
 
-            var newMesh = BABYLON.Mesh.MergeMeshes([roomBox, polygon, this.flipOrient(this.mergedBox)])
+	    // Create a custom air mesh 
+            var airMesh = BABYLON.Mesh.MergeMeshes([roomBox, polygon, this.flipOrient(this.mergedBox)])
             this.scene.removeMesh(roomBox)
             this.scene.removeMesh(polygon)
             roomBox.dispose();
             polygon.dispose();
-            newMesh.isPickable = false;
-            newMesh.material = greenMat;
-            const obj = BABYLON.OBJExport.OBJ([newMesh]);
+            airMesh.isPickable = false;
+            airMesh.material = alphamat;
+	    airMesh.enableEdgesRendering();
+	    airMesh.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
+            const obj = BABYLON.OBJExport.OBJ([airMesh]);
             download("air.obj", obj);
             var text="" ;
-            orgVertexData = BABYLON.VertexData.ExtractFromMesh(newMesh, true, true);
-        
-            /*
-            var indices = orgVertexData.indices;
-            var positions = orgVertexData.positions;
-            for (let i = 0; i < positions.length; i+=3)
-                    text += (i/3 + 1).toString() + " " + positions[i] + " " + positions[i+1] + " " + positions[i+2] + "\n";
-            for (let i = 0; i < indices.length; i+=3)
-                    text += (i/3 + 1).toString() + " 2 2 0 1 " + (indices[i]+1) + " " + (indices[i+1]+1) + " " + (indices[i+2]+1) + "\n";
-            download("t.txt",text);
-            */
-            
-            var vertexDataTest = HXT_Convert(newMesh);
-            //Create a custom mesh 
+            orgVertexData = BABYLON.VertexData.ExtractFromMesh(airMesh, true, true);
+
+	    // Create a tetrahedron air mesh 
+            var vertexDataTest = HXT_Convert(airMesh);
             var tetrahedron = new BABYLON.Mesh("tetra", scene);
-
             vertexDataTest.applyToMesh(tetrahedron);
-
-            //tetrahedron.material = alphamat;
+            tetrahedron.material = alphamat;
             tetrahedron.enableEdgesRendering();
             tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
             tetrahedron.material = greenMat;
