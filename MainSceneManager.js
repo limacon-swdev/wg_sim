@@ -54,7 +54,7 @@ MainSceneManager = function (gameManager) {
     //Curve points
     this.wgOptions = {
         len: 120.0, s: 0.87, q: 0.998, n: 4.34, r: 18.0,
-        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 720,
+        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 20,
         FixedPart: 0.2
     }
     this.wgPosZ = { x: 0.0, y: 0.0, z: 0.0, a: 0.0 }
@@ -434,7 +434,7 @@ MainSceneManager.prototype = {
         }
         var greyMat = new BABYLON.StandardMaterial("greyMat", this.scene);
         greyMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
-        greyMat.alpha = 0.1;
+        greyMat.alpha = 0.4;
         this.Mainbox.material = greyMat;
 
     },
@@ -673,7 +673,7 @@ MainSceneManager.prototype = {
             this.removeLines();
             var greenMat = new BABYLON.StandardMaterial("greenmat", this.scene);
             greenMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
-            greenMat.alpha = 0.1;
+            greenMat.alpha = 0.2;
 
             ///////////////////Create room box without bottom////////////////////////
             var tmp = BABYLON.MeshBuilder.CreateBox("tempBox", { depth: this.roomLength, width: this.roomWidth, height: this.roomDepth }, this.scene); // default box
@@ -845,7 +845,7 @@ MainSceneManager.prototype = {
         this.removeLines();
         const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
         //var objURL = BABYLON.Tools.FileAsURL(obj);
-        //console.log(objURL)
+       // console.log(objURL)
         download("speaker.obj", obj);
     },
     
