@@ -702,11 +702,9 @@ MainSceneManager.prototype = {
             rectangle.push({ x: positions[63], y: positions[64], z: positions[65] });
             rectangle.push({ x: positions[66], y: positions[67], z: positions[68] });
             rectangle.push({ x: positions[69], y: positions[70], z: positions[71] });        
-		    var polygon = BABYLON.MeshBuilder.CreatePolygon("polygon", {shape:rectangle, holes:[this.hole], sideOrientation: BABYLON.Mesh.BACKSIDE }, this.scene);
-		    
-		    
-		    polygon.isPickable = false;
-		    polygon.position.y -=this.roomDepth/2;
+	    var polygon = BABYLON.MeshBuilder.CreatePolygon("polygon", {shape:rectangle, holes:[this.hole], sideOrientation: BABYLON.Mesh.BACKSIDE }, this.scene);
+	    polygon.isPickable = false;
+	    polygon.position.y -=this.roomDepth/2;
 
 	    // Create a custom air mesh 
             var airMesh = BABYLON.Mesh.MergeMeshes([roomBox, polygon, this.flipOrient(this.mergedBox)])
@@ -715,24 +713,23 @@ MainSceneManager.prototype = {
             roomBox.dispose();
             polygon.dispose();
             airMesh.isPickable = false;
-            airMesh.material = alphamat;
+            airMesh.material = greenMat;
 	    airMesh.enableEdgesRendering();
 	    airMesh.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
-            const obj = BABYLON.OBJExport.OBJ([airMesh]);
-            download("air.obj", obj);
-            var text="" ;
-            orgVertexData = BABYLON.VertexData.ExtractFromMesh(airMesh, true, true);
+            const airObj = BABYLON.OBJExport.OBJ([airMesh]);
+            download("air.obj", airObj);
+            var text="";
 
 	    // Create a tetrahedron air mesh 
+            orgVertexData = BABYLON.VertexData.ExtractFromMesh(airMesh, true, true);
             var vertexDataTest = HXT_Convert(airMesh);
             var tetrahedron = new BABYLON.Mesh("tetra", scene);
             vertexDataTest.applyToMesh(tetrahedron);
-            tetrahedron.material = alphamat;
             tetrahedron.enableEdgesRendering();
             tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
             tetrahedron.material = greenMat;
-            
             this.hxtMesh = tetrahedron;
+		
         } else {
             alert("Make speaker mesh first.");
         }
