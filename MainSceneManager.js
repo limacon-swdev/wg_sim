@@ -675,6 +675,11 @@ MainSceneManager.prototype = {
             greenMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
             greenMat.alpha = 0.2;
 
+	    var alphamat = new BABYLON.StandardMaterial('alphamat', scene);
+	    alphamat.diffuseColor = BABYLON.Color3.Blue();
+	    alphamat.emissiveColor = new BABYLON.Color3(1.0, .1, .1);
+	    alphamat.alpha = 0.05;
+
             ///////////////////Create room box without bottom////////////////////////
             var tmp = BABYLON.MeshBuilder.CreateBox("tempBox", { depth: this.roomLength, width: this.roomWidth, height: this.roomDepth }, this.scene); // default box
             tmp.isPickable = false;
@@ -714,21 +719,20 @@ MainSceneManager.prototype = {
             polygon.dispose();
             airMesh.isPickable = false;
             airMesh.material = greenMat;
-	    airMesh.enableEdgesRendering();
-	    airMesh.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
             const airObj = BABYLON.OBJExport.OBJ([airMesh]);
-            download("air.obj", airObj);
+            download("airMesh.obj", airObj);
             var text="";
 
 	    // Create a tetrahedron air mesh 
-            orgVertexData = BABYLON.VertexData.ExtractFromMesh(airMesh, true, true);
             var vertexDataTest = HXT_Convert(airMesh);
             var tetrahedron = new BABYLON.Mesh("tetra", scene);
             vertexDataTest.applyToMesh(tetrahedron);
+	    tetrahedron.material = alphamat;
             tetrahedron.enableEdgesRendering();
-            tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
-            tetrahedron.material = greenMat;
+	    tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
             this.hxtMesh = tetrahedron;
+	    this.scene.removeMesh(airMesh)
+            airMesh.dispose();
 		
         } else {
             alert("Make speaker mesh first.");
