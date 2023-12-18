@@ -179,7 +179,7 @@ MainSceneManager.prototype = {
                 Depth: 120, S: 0.87, Q: 0.998, N: 4.34, ThroatRadius: 18,
                 ThroatExitAngle: 14.5, CoverageHoriz: 100, CoverageVert: 75,
                 FixedPart: 0.2,
-                Resolution: 720, WGXpos: 0.0, WGYpos: 0.0, WGZpos: 0.0, WGZRotationY: 0.0
+                Resolution: 4, WGXpos: 0.0, WGYpos: 0.0, WGZpos: 0.0, WGZRotationY: 0.0
             },
             mouthOptions: {
                 HRadius: 300, VRadius: 300, M: 4, N1: 6, N2: 5, N3: 5,
