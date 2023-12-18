@@ -1,6 +1,6 @@
-MainSceneManager = function (roomCreator) {
+MainSceneManager = function (gameManager) {
 
-    this.room = roomCreator;
+    this.game = gameManager;
 
     //MainScene Obj's
     this.scene = null;
@@ -68,7 +68,7 @@ MainSceneManager = function (roomCreator) {
 MainSceneManager.prototype = {
 
     createScene: function () {
-        this.scene = new BABYLON.Scene(this.room.engine);
+        this.scene = new BABYLON.Scene(this.game.engine);
         this.scene.imageProcessingConfiguration.contrast = 1.6//1.6;
         this.scene.imageProcessingConfiguration.exposure = 0.6//0.6;
         this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
@@ -107,7 +107,7 @@ MainSceneManager.prototype = {
         this.mainCamera = new BABYLON.ArcRotateCamera("ArcCamera",
             0, 0, 10, new BABYLON.Vector3.Zero(), this.scene);
 
-        this.mainCamera.attachControl(this.room.canvas, true);
+        this.mainCamera.attachControl(this.game.canvas, true);
         this.mainCamera.alpha = 1.95;
         this.mainCamera.beta = 1.29;
 
@@ -147,8 +147,6 @@ MainSceneManager.prototype = {
 
         this.scene.environmentTexture = skyboxCubecTexture;
     },
-	
-	
     createGui: function () {
 
         var oldgui = document.getElementById("datGUI");
@@ -165,7 +163,10 @@ MainSceneManager.prototype = {
             Height: '5',
             Create: () => { this.createCubePoints() },
             Erase: () => { this.eraseAll() },
+            SubtactMouthFace: () => { this.subtractMouth() },
+            ExportObj: () => { this.exportObj() },
 
+            MakeHxtAirMesh: () => { this.makeAirMesh() },
             WireFrame: false,
 
             boxRotationY: 0.0,
@@ -200,16 +201,18 @@ MainSceneManager.prototype = {
 
         this.gui.add(this.datOptions, "Erase");
 
+        this.gui.add(this.datOptions, "SubtactMouthFace");
+
+        this.gui.add(this.datOptions, "ExportObj");
+
+        this.gui.add(this.datOptions, "MakeHxtAirMesh");
+
         this.gui.add(this.datOptions, "WireFrame").onChange((value) => {
             this.wallMat.wireframe = value;
         });
+        //this.gui.addb
 
     },
-	
-	
-	
-	
-	
     createCustomCube: function (name, wallLength) {
 
         this.wallPoints = [];
@@ -259,14 +262,9 @@ MainSceneManager.prototype = {
 
         customMesh.material = this.wallMat;
         customMesh.isPickable = false;
-	
+
         return customMesh;
     },
-	
-	
-	
-	
-	
     createCubePoints: function () {
 
         //console.log(this.roomHolder)
@@ -337,7 +335,6 @@ MainSceneManager.prototype = {
         this.createRandomObj();//creat cube
 
     },
-	
     onPointerDown: function (ev) {
         if (ev.button !== 0) {
             return;
@@ -347,16 +344,17 @@ MainSceneManager.prototype = {
         var pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY);//, function (mesh) { return mesh !=ground });
         if (pickInfo.hit) {
             console.log(" */ ", pickInfo.pickedMesh.name, " */ ");
-            if (this.InputMg.currentSelectedMesh) {
+            if (this.InputMg.currentSelectedMesh) {//Item Selected Before
                 console.log("There's obj Selected Before")
             }
             this.InputMg.currentSelectedMesh = this.InputMg.currentTouchedMesh = pickInfo.pickedMesh;
             this.InputMg.currentTouchedMesh.showBoundingBox = true;
-            this.InputMg.startPoint = this.getGroundPosition();
+            this.InputMg.startPoint = this.getGroundPosition(); //= currentTouchedMesh.position;
 
             this.InputMg.currentTouchedMesh.CompConfig.IsSelected = true;
+            // if (this.InputMg.startPoint) { // we need to disconnect camera from canvas
             setTimeout(() => {
-                this.mainCamera.detachControl(this.room.canvas);
+                this.mainCamera.detachControl(this.game.canvas);
             }, 0);
             // }
         }
@@ -373,7 +371,7 @@ MainSceneManager.prototype = {
             this.InputMg.currentTouchedMesh = null;
             this.InputMg.isDragging = false;
         }
-        this.mainCamera.attachControl(this.room.canvas, true);
+        this.mainCamera.attachControl(this.game.canvas, true);
     },
     onPointerMove: function (ev) {
         if (!this.InputMg.currentTouchedMesh)
@@ -458,7 +456,7 @@ MainSceneManager.prototype = {
 
         var f0 = this.gui.addFolder('Box Position');
 
-        //Create box dat
+        //Create box dat 
         f0.add(this.datOptions, "boxWidth", 1, 10).step(.1).onChange((value) => {
             if (this.Mainbox) {
                 if (this.checkValid(
@@ -475,6 +473,8 @@ MainSceneManager.prototype = {
                     this.datOptions.boxWidth += .1
                     console.log(value);
                 }
+                //this.Mainbox.getChildMeshes(false)[0].scaling.x = 1 / this.Mainbox.scaling.x ;
+                //this.curveHolder.position.x = this.wgPosZ.x + this.datOptions.curveOptions.WGXpos/1000/this.Mainbox.scaling.x;
             }
         });
         f0.add(this.datOptions, "boxHeight", 1, 10).step(.1).onChange((value) => {
@@ -527,14 +527,14 @@ MainSceneManager.prototype = {
     createRealCurve: function () {
         if (this.curveHolder) this.curveHolder.dispose();
         this.curveHolder = new BABYLON.Mesh("CurveHolder", this.scene);
+        // this.curveHolder.rotation.x = Math.PI / 2;
         this.curveHolder.position.z = this.boxDepth / 2;
         this.wgPosZ.x = this.curveHolder.position.x
         this.wgPosZ.y = this.curveHolder.position.y
         this.wgPosZ.z = this.curveHolder.position.z
+
         this.wgCreatePoints();
     },
-	
-	
     createCubeCurve: function () {
 
         this.setUpDatControls(this.Mainbox.position.z + this.Mainbox.boxDepth / 2);
@@ -548,11 +548,13 @@ MainSceneManager.prototype = {
         var f2 = this.gui.addFolder('WG Path');
         var f3 = this.gui.addFolder('WG Shape');
         var f4 = this.gui.addFolder('WG SuperFormula');
+
         f1.open();
         f2.open();
         f3.open();
         f4.open();
-		
+
+
         f1.add(this.datOptions.curveOptions, "WGXpos", -1000, 1000).step(1).onChange((value) => {
             this.curveHolder.position.x = this.wgPosZ.x + this.datOptions.curveOptions.WGXpos / 1000;
         });
@@ -561,7 +563,9 @@ MainSceneManager.prototype = {
         });
 
         f1.add(this.datOptions.curveOptions, "WGZRotationY", -180, 180).step(1).onChange((value) => {
+
             this.curveHolder.rotation.z = Math.PI * this.datOptions.curveOptions.WGZRotationY / 180
+
         });
 
         f2.add(this.datOptions.curveOptions, "ThroatRadius", 0.0, 100).step(0.1).onChange((value) => {
@@ -585,6 +589,9 @@ MainSceneManager.prototype = {
             this.wgOptions.caV = value;
             this.wgCreatePoints();
         });
+
+
+
         f2.add(this.datOptions.curveOptions, "S", 0.0, 10.0).step(0.1).onChange((value) => {
             this.wgOptions.s = value;
             this.wgCreatePoints();
@@ -597,21 +604,30 @@ MainSceneManager.prototype = {
             this.wgOptions.n = value;
             this.wgCreatePoints();
         });
+
+
+
+
+
         var wgShape =
         {
             Shape: 'raw'
         }
+
         f3.add(this.datOptions.curveOptions, "FixedPart", 0.0, 1.0).step(0.1).onChange((value) => {
             this.wgOptions.FixedPart = value;
             this.wgCreatePoints();
         });
+
         f4.add(this.datOptions.mouthOptions, "HRadius", 1, 2000).step(1).onChange((value) => {
             var v = this.sfOptions.HRadius
+
             this.sfOptions.HRadius = value;
             if (this.wgCreatePoints() == false) {
                 this.sfOptions.HRadius = v
                 value -= 1
             }
+
         });
         f4.add(this.datOptions.mouthOptions, "VRadius", 1, 2000).step(1).onChange((value) => {
             this.sfOptions.VRadius = value;
@@ -634,10 +650,6 @@ MainSceneManager.prototype = {
             this.wgCreatePoints();
         });
     },
-	
-	
-	
-	
     flipOrient:function (obj){
         orgVertexData = BABYLON.VertexData.ExtractFromMesh( obj, true, true);
         var newNormals=[];       
@@ -655,22 +667,280 @@ MainSceneManager.prototype = {
             vertexData.applyToMesh(newMesh);
             return newMesh;
     },
-	
-	
-	
-	
-	
+    makeAirMesh: function () {
+        console.log(this.mergedBox)
+        if (this.mergedBox != null) {
+            this.removeLines();
+            var greenMat = new BABYLON.StandardMaterial("greenmat", this.scene);
+            greenMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+            greenMat.alpha = 0.2;
+
+            ///////////////////Create room box without bottom////////////////////////
+            var tmp = BABYLON.MeshBuilder.CreateBox("tempBox", { depth: this.roomLength, width: this.roomWidth, height: this.roomDepth }, this.scene); // default box
+            tmp.isPickable = false;
+            
+            orgVertexData = BABYLON.VertexData.ExtractFromMesh( tmp, true, true);
+            tmp.dispose()
+		    var indices       = orgVertexData.indices;
+            var positions     = orgVertexData.positions;
+
+            indices.splice(30, 6)
+            var roomBox = new BABYLON.Mesh("RoomBox", this.scene);
+		    var	vertexData = new BABYLON.VertexData();
+			vertexData.indices		= indices;
+			vertexData.positions	= orgVertexData.positions;
+			vertexData.normals	    = orgVertexData.normals;
+			vertexData.uvs	        = orgVertexData.uvs;
+		    vertexData.applyToMesh(roomBox);
+		    //roomBox.isPickable = false;
+		    //roomBox.visibility =false;
+		    ////////////////////////////////////////////////////////////////////////        
+            /////////////////////Create punch plane/////////////////////////////////
+            var rectangle =[], hole = [];
+        
+            rectangle.push({ x: positions[60], y: positions[61], z: positions[62] });
+            rectangle.push({ x: positions[63], y: positions[64], z: positions[65] });
+            rectangle.push({ x: positions[66], y: positions[67], z: positions[68] });
+            rectangle.push({ x: positions[69], y: positions[70], z: positions[71] });        
+		    var polygon = BABYLON.MeshBuilder.CreatePolygon("polygon", {shape:rectangle, holes:[this.hole], sideOrientation: BABYLON.Mesh.BACKSIDE }, this.scene);
+		    
+		    
+		    polygon.isPickable = false;
+		    polygon.position.y -=this.roomDepth/2;
+
+            var newMesh = BABYLON.Mesh.MergeMeshes([roomBox, polygon, this.flipOrient(this.mergedBox)])
+            this.scene.removeMesh(roomBox)
+            this.scene.removeMesh(polygon)
+            roomBox.dispose();
+            polygon.dispose();
+            newMesh.isPickable = false;
+            newMesh.material = greenMat;
+            const obj = BABYLON.OBJExport.OBJ([newMesh]);
+            download("air.obj", obj);
+            var text="" ;
+            orgVertexData = BABYLON.VertexData.ExtractFromMesh(newMesh, true, true);
+        
+            /*
+            var indices = orgVertexData.indices;
+            var positions = orgVertexData.positions;
+            for (let i = 0; i < positions.length; i+=3)
+                    text += (i/3 + 1).toString() + " " + positions[i] + " " + positions[i+1] + " " + positions[i+2] + "\n";
+            for (let i = 0; i < indices.length; i+=3)
+                    text += (i/3 + 1).toString() + " 2 2 0 1 " + (indices[i]+1) + " " + (indices[i+1]+1) + " " + (indices[i+2]+1) + "\n";
+            download("t.txt",text);
+            */
+            
+            var vertexDataTest = HXT_Convert(newMesh);
+            //Create a custom mesh 
+            var tetrahedron = new BABYLON.Mesh("tetra", scene);
+
+            vertexDataTest.applyToMesh(tetrahedron);
+
+            //tetrahedron.material = alphamat;
+            tetrahedron.enableEdgesRendering();
+            tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
+            tetrahedron.material = greenMat;
+            
+            this.hxtMesh = tetrahedron;
+        } else {
+            alert("Make speaker mesh first.");
+        }
+
+    },
     removeLines: function () {
         if (this.lines.length > 0)
             for (let i = 0; i < this.lines.length; i++)
                 this.lines[i].dispose();
-    },	
-	
-	
+    },
+    subtractMouth: function (wgParams = this.wgOptions, sfParams = this.sfOptions) {
+        if (this.Mainbox == null || this.Mainbox.visibility == false) {
+            alert("Create Main box first");
+            return;
+        }
+        orgVertexData = BABYLON.VertexData.ExtractFromMesh( this.Mainbox, true, true);
+		var indices     = orgVertexData.indices;
+		var positions   = orgVertexData.positions;
 
-	
-	
-	
+        indices.splice(0, 6)
+        indices.splice(24, 6)
+        this.hole.push({ x: positions[60], y: positions[61], z: positions[62] });
+        this.hole.push({ x: positions[63], y: positions[64], z: positions[65] });
+        this.hole.push({ x: positions[66], y: positions[67], z: positions[68] });
+        this.hole.push({ x: positions[69], y: positions[70], z: positions[71] });
+        var tetrahedron = new BABYLON.Mesh("tetra", this.scene);
+		var	vertexData = new BABYLON.VertexData();
+			vertexData.indices		= indices;
+			vertexData.positions	= positions;
+			vertexData.normals	    = orgVertexData.normals;
+			vertexData.uvs	    = orgVertexData.uvs;
+		vertexData.applyToMesh(tetrahedron);
+		tetrahedron.position = this.Mainbox.position;
+		//////////////////////Create front mesh with hole /////////////
+		var rectangle =[], mouth = [],thro=[];
+		var sfMouthPoints = this.superformulaCurve(sfParams.HRadius / 1000, sfParams.VRadius / 1000, sfParams.m, sfParams.n1, sfParams.n2, sfParams.n3, sfParams.resolution, 0);
+        for (let i = 0; i < sfMouthPoints.length; i++)
+            mouth.push({ x: sfMouthPoints[i].x, y: 0, z: sfMouthPoints[i].y });
+        
+        rectangle.push({ x: positions[9], y: 0, z: positions[10] })
+        rectangle.push({ x: positions[6], y: 0, z: positions[7] })
+        rectangle.push({ x: positions[3], y: 0, z: positions[4] })            
+        rectangle.push({ x: positions[0], y: 0, z: positions[1]})
+        
+		var polygon = BABYLON.MeshBuilder.CreatePolygon("polygon", {shape:rectangle, holes:[mouth], sideOrientation: BABYLON.Mesh.FRONTSIDE }, this.scene);
+        polygon.position.x = this.Mainbox.position.x;
+        polygon.position.y = this.Mainbox.position.y;
+        polygon.position.z = this.Mainbox.position.z + this.boxDepth /2;
+        polygon.rotation.x = Math.PI /2;
+        polygon.isPickable = false;
+        ////////////////////////////////////////////////////////////////////
+        //////////////////Create throus mesh//////////////////////////////////
+        var throatZlevel = this.wgOptions.len / 1000;
+        var sfEntryPoint = this.superformulaCurve(wgParams.r / 1000, wgParams.r / 1000, 4, 2, 2, 2, sfParams.resolution, -throatZlevel)
+
+        for (let i = 0; i < sfEntryPoint.length; i++)
+            thro.push({ x: sfEntryPoint[i].x, y: 0, z: sfEntryPoint[i].y });
+
+        var polygon2 = BABYLON.MeshBuilder.CreatePolygon("polygon2", { shape: thro, sideOrientation:  BABYLON.Mesh.FRONTSIDE}, this.scene);
+        polygon2.parent = this.curveHolder
+        polygon2.rotation.x = Math.PI / 2
+        polygon2.position.z = -wgParams.len / 1000;
+        ////////////////////////////////////////////////////
+        tetrahedron.parent = null;
+        polygon.parent = null;
+        var v1 = BABYLON.VertexData.ExtractFromMesh( tetrahedron, true, true);
+        var v2 = BABYLON.VertexData.ExtractFromMesh( polygon, true, true);
+        
+        var allPath = [];
+        for (var i = 0; i < sfParams.resolution; i++) {
+            var wgHPoints = [];
+            wgHPoints = this.wgPoints(wgParams.len / 1000, wgParams.s, wgParams.q, wgParams.n, wgParams.r / 1000, wgParams.tau,
+                this.spaceAlpha(wgParams.caH, wgParams.caV, Math.PI * 2 / sfParams.resolution * i), wgParams.resolution,
+                Math.sqrt(sfMouthPoints[i].x * sfMouthPoints[i].x + sfMouthPoints[i].y * sfMouthPoints[i].y),
+                wgParams.FixedPart,
+                Math.PI * 2 / sfParams.resolution * i);
+
+            allPath.push(wgHPoints);
+        }
+
+        var horn = BABYLON.MeshBuilder.CreateRibbon("ribbon", { pathArray: allPath, closeArray: true, closePath: false,sideOrientation: BABYLON.Mesh.FRONTSIDE }, this.scene);
+        horn.parent = this.curveHolder
+
+        
+        var newMesh = BABYLON.Mesh.MergeMeshes([tetrahedron, polygon,polygon2,horn])
+        newMesh.isPickable = false;
+        
+        if (this.mergedBox != null) this.eraseAll();
+        this.mergedBox = newMesh;
+        tetrahedron.dispose();
+        polygon.dispose();
+        polygon2.dispose();
+        horn.dispose();
+        
+        var redMat = new BABYLON.StandardMaterial("redmat", this.scene);
+        redMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+        redMat.alpha = 0.7;
+        this.mergedBox.material =  redMat;
+        this.Mainbox.visibility = false;
+        this.horn.visibility = false;
+        this.removeLines();
+        const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
+        //var objURL = BABYLON.Tools.FileAsURL(obj);
+       // console.log(objURL)
+        download("speaker.obj", obj);
+    },
+    
+    subtractMouth2: function (wgParams = this.wgOptions, sfParams = this.sfOptions) {
+        if (this.Mainbox == null || this.Mainbox.visibility == false) {
+            alert("Create Main box first");
+            return;
+        }
+        orgVertexData = BABYLON.VertexData.ExtractFromMesh( this.Mainbox, true, true);
+		var indices     = orgVertexData.indices;
+		var positions   = orgVertexData.positions;
+       
+        indices.splice(0, 6)
+        indices.splice(24, 6)
+        var tetrahedron = new BABYLON.Mesh("tetra", this.scene);
+		var	vertexData = new BABYLON.VertexData();
+			vertexData.indices		= indices;
+			vertexData.positions	= positions;
+			vertexData.normals	    = orgVertexData.normals;
+			vertexData.uvs	    = orgVertexData.uvs;
+		vertexData.applyToMesh(tetrahedron);
+		tetrahedron.position = this.Mainbox.position;
+		//////////////////////Create front mesh with hole /////////////
+		var rectangle =[], mouth = [],thro=[];
+		var sfMouthPoints = this.superformulaCurve(sfParams.HRadius / 1000, sfParams.VRadius / 1000, sfParams.m, sfParams.n1, sfParams.n2, sfParams.n3, sfParams.resolution, 0);
+        for (let i = 0; i < sfMouthPoints.length; i++)
+            mouth.push({ x: sfMouthPoints[i].x, y: 0, z: sfMouthPoints[i].y });
+        
+        rectangle.push({ x: positions[9], y: 0, z: positions[10] })
+        rectangle.push({ x: positions[6], y: 0, z: positions[7] })
+        rectangle.push({ x: positions[3], y: 0, z: positions[4] })            
+        rectangle.push({ x: positions[0], y: 0, z: positions[1]})
+        
+		var polygon = BABYLON.MeshBuilder.CreatePolygon("polygon", {shape:rectangle, holes:[mouth], sideOrientation: BABYLON.Mesh.FRONTSIDE }, this.scene);
+        polygon.position.x = this.Mainbox.position.x;
+        polygon.position.y = this.Mainbox.position.y;
+        polygon.position.z = this.Mainbox.position.z + this.boxDepth /2;
+        polygon.rotation.x = Math.PI /2;
+        polygon.isPickable = false;
+        ////////////////////////////////////////////////////////////////////
+        //////////////////Create throus mesh//////////////////////////////////
+        var throatZlevel = this.wgOptions.len / 1000;
+        var sfEntryPoint = this.superformulaCurve(wgParams.r / 1000, wgParams.r / 1000, 4, 2, 2, 2, sfParams.resolution, -throatZlevel)
+
+        for (let i = 0; i < sfEntryPoint.length; i++)
+            thro.push({ x: sfEntryPoint[i].x, y: 0, z: sfEntryPoint[i].y });
+
+        var polygon2 = BABYLON.MeshBuilder.CreatePolygon("polygon2", { shape: thro, sideOrientation:  BABYLON.Mesh.FRONTSIDE}, this.scene);
+        polygon2.parent = this.curveHolder
+        polygon2.rotation.x = Math.PI / 2
+        polygon2.position.z = -wgParams.len / 1000;
+        ////////////////////////////////////////////////////
+        tetrahedron.parent = null;
+        polygon.parent = null;
+        var v1 = BABYLON.VertexData.ExtractFromMesh( tetrahedron, true, true);
+        var v2 = BABYLON.VertexData.ExtractFromMesh( polygon, true, true);
+        
+        var allPath = [];
+        for (var i = 0; i < sfParams.resolution; i++) {
+            var wgHPoints = [];
+            wgHPoints = this.wgPoints(wgParams.len / 1000, wgParams.s, wgParams.q, wgParams.n, wgParams.r / 1000, wgParams.tau,
+                this.spaceAlpha(wgParams.caH, wgParams.caV, Math.PI * 2 / sfParams.resolution * i), wgParams.resolution,
+                Math.sqrt(sfMouthPoints[i].x * sfMouthPoints[i].x + sfMouthPoints[i].y * sfMouthPoints[i].y),
+                wgParams.FixedPart,
+                Math.PI * 2 / sfParams.resolution * i);
+
+            allPath.push(wgHPoints);
+        }
+
+        var horn = BABYLON.MeshBuilder.CreateRibbon("ribbon", { pathArray: allPath, closeArray: true, closePath: false,sideOrientation: BABYLON.Mesh.FRONTSIDE }, this.scene);
+        horn.parent = this.curveHolder
+
+        
+        var newMesh = BABYLON.Mesh.MergeMeshes([tetrahedron, polygon,polygon2,horn])
+        newMesh.isPickable = false;
+        
+        if (this.mergedBox != null) this.eraseAll();
+        this.mergedBox = newMesh;
+        tetrahedron.dispose();
+        polygon.dispose();
+        polygon2.dispose();
+        horn.dispose();
+        
+        var redMat = new BABYLON.StandardMaterial("redmat", this.scene);
+        redMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+        redMat.alpha = 0.7;
+        this.mergedBox.material =  redMat;
+        this.Mainbox.visibility = false;
+        this.horn.visibility = false;
+        this.removeLines();
+        const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
+        //var objURL = BABYLON.Tools.FileAsURL(obj);
+       // console.log(objURL)
+        download("speaker.obj", obj);
+    },
     wgCheck: function (mouthFace) {
         var minx = 0, miny = 0, maxx = 0, maxy = 0
         for (let i = 0; i < mouthFace.length; i++) {
@@ -693,121 +963,130 @@ MainSceneManager.prototype = {
         }
         return true;
     },
-	
-	
-	
+    exportObj: function () {
+        if (this.mergedBox) {
+            this.mergedBox.parent = null
+            const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
+            var objURL = BABYLON.Tools.FileAsURL(obj);
+            console.log(objURL)
+            download("speaker.obj", obj);
+        } else {
+            alert("Make speaker mesh first.");
+        }
+
+
+    },
     wgCreatePoints: function (wgParams = this.wgOptions, sfParams = this.sfOptions) {
 
         var poly = []
-		
-		var wgHPoints = [];
-		
         var sfMouthPoints = this.superformulaCurve(sfParams.HRadius / 1000, sfParams.VRadius / 1000, sfParams.m, sfParams.n1, sfParams.n2, sfParams.n3, sfParams.resolution, 0);
         sfMouthPoints.push(sfMouthPoints[0]);
-		
         var sfMouthLine = BABYLON.Mesh.CreateLines("sf", sfMouthPoints, this.scene);
         sfMouthLine.color = new BABYLON.Color3(0.5, 1, 0.5);
-		
         if (this.wgCheck(sfMouthPoints) == false) return false;
+
+        this.removeLines();
 
         if (this.horn != null)
             this.horn.dispose();
-		
+
+        ////////////////////////////////////////////////////////////////
         var throatZlevel = wgParams.len / 1000;
         var sfEntryPoint = this.superformulaCurve(wgParams.r / 1000, wgParams.r / 1000, 4, 2, 2, 2, sfParams.resolution, -throatZlevel)
-		
+
         var allPath = [];
-		
         for (var i = 0; i < sfParams.resolution; i++) {
-            wgHPoints = this.wgPoints(	wgParams.len / 1000, 
-										wgParams.s,
-										wgParams.q, 
-										wgParams.n, 
-										wgParams.r / 1000, 
-										wgParams.tau,
-										this.spaceAlpha(wgParams.caH, wgParams.caV, Math.PI * 2 / sfParams.resolution * i),
-										wgParams.resolution,
-										Math.sqrt(sfMouthPoints[i].x * sfMouthPoints[i].x + sfMouthPoints[i].y * sfMouthPoints[i].y),
-										wgParams.FixedPart,
-										Math.PI * 2 / sfParams.resolution * i);
+            var wgHPoints = [];
+
+            wgHPoints = this.wgPoints(wgParams.len / 1000, wgParams.s, wgParams.q, wgParams.n, wgParams.r / 1000, wgParams.tau,
+                this.spaceAlpha(wgParams.caH, wgParams.caV, Math.PI * 2 / sfParams.resolution * i), wgParams.resolution,
+                Math.sqrt(sfMouthPoints[i].x * sfMouthPoints[i].x + sfMouthPoints[i].y * sfMouthPoints[i].y),
+                wgParams.FixedPart,
+                Math.PI * 2 / sfParams.resolution * i);
+
             allPath.push(wgHPoints);
-			var wgLines = BABYLON.MeshBuilder.CreateLines("path", {points: wgHPoints});
-			this.wgLines = wgLines;
-		    this.wgLines.parent = this.curveHolder;
         }
-		
-        this.removeLines();
 
-	    const mat = new BABYLON.StandardMaterial("mat1", this.scene);
-  	    mat.diffuseColor = new BABYLON.Color3(1.0, 0, 0.5);
-  	    mat.backFaceCulling = false;
-
+        var mat = new BABYLON.StandardMaterial("mat1", this.scene);
+        mat.alpha = 1;
+        mat.diffuseColor = new BABYLON.Color3(0, 0, 1.0);
+        mat.emissiveColor = new BABYLON.Color3.Black();
+        mat.backFaceCulling = false;
         var horn = BABYLON.MeshBuilder.CreateRibbon("ribbon", { pathArray: allPath, closeArray: true, closePath: false,sideOrientation:1 }, this.scene);
         horn.material = mat;
         horn.isPickable = false;
         this.horn = horn;
         this.horn.parent = this.curveHolder;
-		
+
         this.lines.push(sfMouthLine)
         for (let i = 0; i < this.lines.length; i++) {
             this.lines[i].isPickable = false;
             this.lines[i].parent = this.curveHolder;
         }
         this.curveHolder.parent = this.Mainbox;
-
-		
         return true;
     },
-	
-	
-	
-	
-	
 
     spaceAlpha: function (h, v, ang) {
         return Math.sqrt(Math.pow(h * Math.cos(ang), 2.0) + Math.pow(v * Math.sin(ang), 2.0));
     },
-	
-	
-	
-	
     wgPoints: function (len, s, q, n, r, tau, alpha, resolution, maxY, fixedPart, beta) {
+        //len: 120.0, s: 0.87, q: 0.998, n: 4.34, r: 18.0,
+        //tau: 14.5, caH: 100.0, caV: 75.0, resolution: 720,
+        // ConicSectionPart: 0.6, FixedPart: 0.2, CornerRadius: 30, StretchExp: 1.5
         var step = len / resolution;
+
         var wgPoints = [];
+
         var k1 = r * r;
         var k2 = 2.0 * r * Math.tan(BABYLON.Tools.ToRadians(0.5 * tau));
         var k3 = Math.pow(Math.tan(BABYLON.Tools.ToRadians(0.5 * alpha)), 2.00);
+
+
         var x = resolution * step;
         var os1 = Math.sqrt(k1 + k2 * x + k3 * x * x);
         var se1 = len * s / q * (1.0 - (1.0 - (q * x / len) ** n) ** (1 / n));
         var wg1 = os1 + se1;
-        var zmax = wg1;
+        //var wg2 = new BABYLON.Vector3(wg1, 0, x - len);
+        var zmax = wg1;// (maxY - r) / (wg1 - r) ;
+        //wgPoints.push(wg2);
+
         for (var i = 0; i <= resolution; i++) {
             var x = i * step;
             var os1 = Math.sqrt(k1 + k2 * x + k3 * x * x);
             var se1 = len * s / q * (1.0 - (1.0 - (q * x / len) ** n) ** (1 / n));
             var wg1 = os1 + se1;
+
             if (x >= fixedPart * len) {
+                // console.log(Math.pow((x-fixedPart*len) / (len - fixedPart*len),3.0),(rb - maxY ) )
                 wg1 += Math.pow((x - fixedPart * len) / (len - fixedPart * len), 2) * (maxY - zmax)
+                //console.log(wg1)
             }
+
             var wg2 = new BABYLON.Vector3(wg1 * Math.cos(beta), wg1 * Math.sin(beta), x - len);
+
+            //var wg2 = new BABYLON.Vector3( (wg1 - r)*ratio + r, 0, x - len);
+
+
             wgPoints.push(wg2);
         }
         return wgPoints;
     },
 
-	
-	
-	
     superformulaCurve: function (a, b, m, n1, n2, n3, res, z) {
         var dt = 2 * Math.PI / res;
+
         var sfpoints = [];
+
         for (var i = 0; i < res; i++) {
+
             var u, t, t1, t2, r, x, y;
+
             u = m * (i * dt - Math.PI) / 4;
             t1 = Math.abs(Math.cos(u) / a) ** n2;
             t2 = Math.abs(Math.sin(u) / b) ** n3;
             r = Math.abs(t1 + t2) ** (-1 / n1);
+
             if (Math.abs(t) === 0) {
                 sfpoints.push(new BABYLON.Vector3(0, z, 0));
             } else {
@@ -815,13 +1094,11 @@ MainSceneManager.prototype = {
                 y = r * Math.sin(i * dt);
                 sfpoints.push(new BABYLON.Vector3(x, y, z));
             }
+
         };
+
         return sfpoints;
+
     }
-	
-	
-	
-	
-	
 
 }
