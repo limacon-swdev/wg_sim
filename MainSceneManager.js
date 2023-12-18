@@ -54,11 +54,11 @@ MainSceneManager = function (gameManager) {
     //Curve points
     this.wgOptions = {
         len: 120.0, s: 0.87, q: 0.998, n: 4.34, r: 18.0,
-        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 20,
+        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 720,
         FixedPart: 0.2
     }
     this.wgPosZ = { x: 0.0, y: 0.0, z: 0.0, a: 0.0 }
-    this.sfOptions = { HRadius: 300, VRadius: 300, m: 4, n1: 6, n2: 5, n3: 5, resolution: 20 }
+    this.sfOptions = { HRadius: 300, VRadius: 300, m: 4, n1: 6, n2: 5, n3: 5, resolution: 720 }
     this.lines = [];
     this.horn = null;
     this.mergedBox = null;
@@ -179,7 +179,7 @@ MainSceneManager.prototype = {
                 Depth: 120, S: 0.87, Q: 0.998, N: 4.34, ThroatRadius: 18,
                 ThroatExitAngle: 14.5, CoverageHoriz: 100, CoverageVert: 75,
                 FixedPart: 0.2,
-                Resolution: 4, WGXpos: 0.0, WGYpos: 0.0, WGZpos: 0.0, WGZRotationY: 0.0
+                Resolution: 2, WGXpos: 0.0, WGYpos: 0.0, WGZpos: 0.0, WGZRotationY: 0.0
             },
             mouthOptions: {
                 HRadius: 300, VRadius: 300, M: 4, N1: 6, N2: 5, N3: 5,
@@ -434,7 +434,7 @@ MainSceneManager.prototype = {
         }
         var greyMat = new BABYLON.StandardMaterial("greyMat", this.scene);
         greyMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
-        greyMat.alpha = 0.4;
+        greyMat.alpha = 0.1;
         this.Mainbox.material = greyMat;
 
     },
@@ -673,7 +673,7 @@ MainSceneManager.prototype = {
             this.removeLines();
             var greenMat = new BABYLON.StandardMaterial("greenmat", this.scene);
             greenMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
-            greenMat.alpha = 0.2;
+            greenMat.alpha = 0.1;
 
             ///////////////////Create room box without bottom////////////////////////
             var tmp = BABYLON.MeshBuilder.CreateBox("tempBox", { depth: this.roomLength, width: this.roomWidth, height: this.roomDepth }, this.scene); // default box
@@ -844,8 +844,8 @@ MainSceneManager.prototype = {
         this.horn.visibility = false;
         this.removeLines();
         const obj = BABYLON.OBJExport.OBJ([this.mergedBox]);
-        //var objURL = BABYLON.Tools.FileAsURL(obj);
-       // console.log(objURL)
+        var objURL = BABYLON.Tools.FileAsURL(obj);
+        console.log(objURL)
         download("speaker.obj", obj);
     },
     
