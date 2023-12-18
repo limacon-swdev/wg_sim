@@ -675,7 +675,7 @@ MainSceneManager.prototype = {
             greenMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
             greenMat.alpha = 0.2;
 
-	    var alphamat = new BABYLON.StandardMaterial('alphamat', scene);
+	    var alphamat = new BABYLON.StandardMaterial('alphamat', this.scene);
 	    alphamat.diffuseColor = BABYLON.Color3.Blue();
 	    alphamat.emissiveColor = new BABYLON.Color3(1.0, .1, .1);
 	    alphamat.alpha = 0.05;
@@ -725,7 +725,7 @@ MainSceneManager.prototype = {
 
 	    // Create a tetrahedron air mesh 
             var vertexDataTest = HXT_Convert(airMesh);
-            var tetrahedron = new BABYLON.Mesh("tetra", scene);
+            var tetrahedron = new BABYLON.Mesh("tetra", this.scene);
             vertexDataTest.applyToMesh(tetrahedron);
 	    tetrahedron.material = alphamat;
             tetrahedron.enableEdgesRendering();
