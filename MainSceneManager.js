@@ -730,7 +730,9 @@ MainSceneManager.prototype = {
 	    tetrahedron.material = alphamat;
             tetrahedron.enableEdgesRendering();
 	    tetrahedron.edgesColor = new BABYLON.Color4(0, 1, 0, 1);
+	    tetrahedron.edgesWidth = 2.0;
             this.hxtMesh = tetrahedron;
+		
 	    this.scene.removeMesh(airMesh)
             airMesh.dispose();
 		
