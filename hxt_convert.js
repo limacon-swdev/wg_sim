@@ -45,7 +45,7 @@ HXT_OPTIMIZE = function (vertexArray,indexArray){
     for (let i = 0; i < indexArray.length; i += 3)
         text += (i / 3 + 1).toString() + " 2 2 0 1 " + (indexArray[i] + 1) + " " + (indexArray[i + 1] + 1) + " " + (indexArray[i + 2] + 1) + "\n";
     text += "$EndElements";
-    //download("t.txt", text);
+    download("t.txt", text);
 
            
     //console.log(removeIndex , vertexArray.length)
@@ -57,34 +57,39 @@ HXT_Convert = function (mesh) {
     var source;
 
     if (mesh) {
+
         if (mesh.isAnInstance) {
             Logger.Warn("Cannot operate on instance meshes.");
             return null;
         }
 
         const wm = mesh.computeWorldMatrix(true);
-
         orgVertexData = BABYLON.VertexData.ExtractFromMesh(mesh, true, true);
         orgVertexData.transform(wm);
-
         var indices = orgVertexData.indices;
         var positions = orgVertexData.positions;
+
+        //////////////////// optimise /////////////////////////////////////
+
         HXT_OPTIMIZE(positions,indices);
-        console.log(positions)
+        console.table(positions);
+        console.table(indices);
 
-        ////////////////////parameter parsing////////////////////////////
-       // console.table(positions);console.table(indices)
-        //console.
+        //////////////////// parameter parsing ////////////////////////////
 
-        var positionDblArray = new Float64Array(positions)
-        var indexIntArray = new Uint32Array(indices)
-        //console.log(positionDblArray);console.log(indexIntArray);
+        var positionDblArray = new Float64Array(positions);
+        var indexIntArray = new Uint32Array(indices);
+        console.log(positionDblArray);
+        console.log(indexIntArray);
+
         ///////////////// Make buffer for vertices and indices /////////////////////////////////////////////////////
+
+        console.log("malloc buffers start");
         var positionBuffer = Module._malloc(positionDblArray.length * positionDblArray.BYTES_PER_ELEMENT);
         var indexBuffer = Module._malloc(indexIntArray.length * indexIntArray.BYTES_PER_ELEMENT);
-
         Module.HEAPF64.set(positionDblArray, positionBuffer >> 3);
         Module.HEAP32.set(indexIntArray, indexBuffer >> 2);
+        console.log("malloc buffers end");
 
         ////////////////////////////prepare to retrieve variables /////////////////////////////////
 
@@ -94,23 +99,21 @@ HXT_Convert = function (mesh) {
         var newVerticesBuffer = Module._malloc(positions.length * 8 * 2);
 
         ////////////////////////////// Call HXT function ///////////////////////////////////////////
-        //uint32_t num, double* vertices,uint32_t * newVerticesNum,double * newVertices, uint32_t * newTetNum, uint32_t * newTetra
 
-        //int EMSCRIPTEN_KEEPALIVE web_hxt_tetMesh(
-        //uint32_t npos, double pos[], uint64_t nind, uint32_t indices[],
-        //uint32_t *nhpos, double hpos[], uint64_t *ntet, uint32_t tets[]) {
+        // uint32_t num, double* vertices,uint32_t * newVerticesNum,double * newVertices, uint32_t * newTetNum, uint32_t * newTetra
+        // int EMSCRIPTEN_KEEPALIVE web_hxt_tetMesh(
+        // uint32_t npos, double pos[], uint64_t nind, uint32_t indices[],
+        // uint32_t *nhpos, double hpos[], uint64_t *ntet, uint32_t tets[]) {
 
+        console.log("hxt starts");
         var result = Module.ccall(
-            'web_hxt_tetMesh',	// name of C function 
-            'number',	// return type
-            ['number', 'number', 'number', 'number',
-                'number', 'number', 'number', 'number'],	// argument types
-            [
-                positions.length, positionBuffer, indices.length, indexBuffer,
-                newVerticesCountBuffer, newVerticesBuffer, newTetCountBuffer, TetBuffer
-            ]	// arguments
+            'web_hxt_tetMesh',
+            'number',
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [positions.length, positionBuffer, indices.length, indexBuffer, newVerticesCountBuffer, newVerticesBuffer, newTetCountBuffer, TetBuffer]
         );
         console.log("hxt ends");
+
         ///////////////////////////////Parse result //////////////////////////////////////////////
 
         var newIndices = [];
@@ -120,18 +123,11 @@ HXT_Convert = function (mesh) {
         var newTCount = getValue(newTetCountBuffer, 'i32');
 
         //////// make new vertices /////////////////
-        for (let v = 0; v < newVCount * 3;) {
-            newPositions.push(Module.HEAPF64[newVerticesBuffer / Float64Array.BYTES_PER_ELEMENT + v]); v++
-        }
 
-        // nbfaces = 4
-        // face: [[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]]
-        // for (f = 0; f < nbfaces; f++) {
-        //for (i = 0; i < data.face[f].length - 2; i++) {
-        //    indices.push(data.face[f][0], data.face[f][i + 2], data.face[f][i + 1]);
-        //	}
-        //}
-        //[0,1,2],[0,2,3],[0,3,1],[1,3,2]
+        for (let v = 0; v < newVCount * 3;) {
+            newPositions.push(Module.HEAPF64[newVerticesBuffer / Float64Array.BYTES_PER_ELEMENT + v]);
+            v++
+        }
 
         // make new indices
 
@@ -140,8 +136,10 @@ HXT_Convert = function (mesh) {
             var tetraInx1 = Module.HEAP32[TetBuffer / Uint32Array.BYTES_PER_ELEMENT + f]; f++;
             var tetraInx2 = Module.HEAP32[TetBuffer / Uint32Array.BYTES_PER_ELEMENT + f]; f++;
             var tetraInx3 = Module.HEAP32[TetBuffer / Uint32Array.BYTES_PER_ELEMENT + f]; f++;
+
             //console.log(tetraInx0)
             //tetrahedra.push([tetraInx0,tetraInx2,tetraInx2,tetraInx3]);
+
             newIndices.push(tetraInx0, tetraInx1, tetraInx2);
             newIndices.push(tetraInx0, tetraInx2, tetraInx3);
             newIndices.push(tetraInx0, tetraInx3, tetraInx1);

@@ -54,11 +54,11 @@ MainSceneManager = function (gameManager) {
     //Curve points
     this.wgOptions = {
         len: 120.0, s: 0.87, q: 0.998, n: 4.34, r: 18.0,
-        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 20,
+        tau: 14.5, caH: 100.0, caV: 75.0, resolution: 120,
         FixedPart: 0.2
     }
     this.wgPosZ = { x: 0.0, y: 0.0, z: 0.0, a: 0.0 }
-    this.sfOptions = { HRadius: 300, VRadius: 300, m: 4, n1: 6, n2: 5, n3: 5, resolution: 720 }
+    this.sfOptions = { HRadius: 300, VRadius: 300, m: 4, n1: 6, n2: 5, n3: 5, resolution: 120 }
     this.lines = [];
     this.horn = null;
     this.mergedBox = null;
@@ -1026,7 +1026,7 @@ MainSceneManager.prototype = {
     },
     wgPoints: function (len, s, q, n, r, tau, alpha, resolution, maxY, fixedPart, beta) {
         //len: 120.0, s: 0.87, q: 0.998, n: 4.34, r: 18.0,
-        //tau: 14.5, caH: 100.0, caV: 75.0, resolution: 720,
+        //tau: 14.5, caH: 100.0, caV: 75.0, resolution: 120,
         // ConicSectionPart: 0.6, FixedPart: 0.2, CornerRadius: 30, StretchExp: 1.5
         var step = len / resolution;
 
